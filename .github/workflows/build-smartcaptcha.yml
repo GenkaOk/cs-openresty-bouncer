@@ -1,0 +1,54 @@
+name: build smartcaptcha image
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "build + verify lualib"
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Set up buildx
+      uses: docker/setup-buildx-action@v3
+
+    # same command as docs/smartcaptcha.md, run on amd64 to match the target host
+    - name: Build image from the forked lua-cs-bouncer
+      run: |
+        docker buildx build --load \
+          --platform linux/amd64 \
+          --build-arg BUILD_ENV=git \
+          --build-arg LUA_LIB_REPO=https://github.com/GenkaOk/lua-cs-bouncer.git \
+          --build-arg LUA_LIB_VERSION=smartcaptcha \
+          -t smartcaptcha/openresty:ci .
+
+    - name: Verify the SmartCaptcha patch is inside the image
+      run: |
+        set -e
+        img=smartcaptcha/openresty:ci
+        lib=/usr/local/openresty/lualib/plugins/crowdsec/captcha.lua
+        docker run --rm --entrypoint sh $img -c "grep -n smartcaptcha $lib"
+        for expected in \
+          'smartcaptcha.cloud.yandex.ru/validate' \
+          'smartcaptcha.cloud.yandex.ru/captcha.js' \
+          'smart-token' \
+          'smart-captcha'; do
+          docker run --rm --entrypoint sh $img -c "grep -q '$expected' $lib" \
+            || { echo "missing in $lib: $expected"; exit 1; }
+        done
+        # upstream providers must still be there
+        for expected in recaptcha hcaptcha turnstile; do
+          docker run --rm --entrypoint sh $img -c "grep -q '$expected' $lib" \
+            || { echo "lost upstream provider: $expected"; exit 1; }
+        done
+
+    - name: Verify the config sample and templates shipped
+      run: |
+        set -e
+        img=smartcaptcha/openresty:ci
+        docker run --rm --entrypoint sh $img -c 'grep -n smartcaptcha /etc/crowdsec/bouncers/crowdsec-openresty-bouncer.conf'
+        docker run --rm --entrypoint sh $img -c 'test -s /var/lib/crowdsec/lua/templates/captcha.html'
