@@ -5,8 +5,9 @@ RUN luarocks install lua-resty-http 0.17.1-0
 
 FROM with_deps AS git
 ARG LUA_LIB_VERSION=v1.0.19
+ARG LUA_LIB_REPO=https://github.com/crowdsecurity/lua-cs-bouncer.git
 RUN apk add --no-cache git
-RUN git clone -b "${LUA_LIB_VERSION}" https://github.com/crowdsecurity/lua-cs-bouncer.git /lua-cs-bouncer
+RUN git clone -b "${LUA_LIB_VERSION}" "${LUA_LIB_REPO}" /lua-cs-bouncer
 
 FROM with_deps AS local
 COPY lua-cs-bouncer/ /lua-cs-bouncer/

@@ -26,3 +26,22 @@ New/unknown IP are checked against crowdsec API, and if request should be blocke
 # Installation
 
 Please follow the [official documentation](https://doc.crowdsec.net/docs/bouncers/openresty).
+
+## This fork
+
+Fork of the upstream bouncer based on **v1.2.3** that adds **Yandex SmartCaptcha**
+(`CAPTCHA_PROVIDER=smartcaptcha`). The actual patch lives in the forked
+[lua-cs-bouncer](https://github.com/GenkaOk/lua-cs-bouncer) (`captcha.lua`), this
+repository only gained a `LUA_LIB_REPO`/`LUA_LIB_VERSION` build argument so the image
+can be built straight from the forks.
+
+```bash
+docker build \
+  --build-arg BUILD_ENV=git \
+  --build-arg LUA_LIB_REPO=https://github.com/GenkaOk/lua-cs-bouncer.git \
+  --build-arg LUA_LIB_VERSION=smartcaptcha \
+  -t smartcaptcha/openresty:1.2.3-smartcaptcha .
+```
+
+Build, deployment, verification, update and rollback procedure:
+[docs/smartcaptcha.md](docs/smartcaptcha.md) (Russian).
